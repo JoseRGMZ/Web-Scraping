@@ -1,0 +1,73 @@
+import requests
+from bs4 import BeautifulSoup
+import time  # Import time for delay
+
+def scrape_states(base_url):
+    states = []
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+
+    try:
+        response = requests.get(base_url, headers=headers)
+        response.raise_for_status()  # Raise an error for bad responses
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Find all state links in the state directory
+        state_links = soup.find_all('a', class_='Directory-listLink')
+        for link in state_links:
+            state_abbr = link['href'].strip()  # Extract the state abbreviation from the link
+            states.append(state_abbr)
+
+    except requests.RequestException as e:
+        print(f"Error fetching {base_url}: {e}")
+
+    return states
+
+def generate_city_urls(states):
+    base_url = "https://stores.petco.com"
+    city_urls = []
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+
+    for state in states:
+        try:
+            # Construct the state URL to scrape its cities
+            state_url = f"{base_url}/{state}/"
+            response = requests.get(state_url, headers=headers)
+            response.raise_for_status()  # Raise an error for bad responses
+            soup = BeautifulSoup(response.text, 'html.parser')
+
+            # Find all city links
+            city_links = soup.find_all('a', class_='Directory-listLink')
+            for link in city_links:
+                city_name = link['href'].strip().split('/')[-1].replace('.html', '')
+                parts = city_name.split('-')
+
+                if len(parts) >= 4:
+                    extracted_city_name = parts[2]  # Second part (the actual city name)
+                    # Append .html to the final URL
+                    final_url = f"{base_url}/{state}/{extracted_city_name}/{city_name}.html"
+                    city_urls.append(final_url)
+
+            # Adding delay between requests
+            time.sleep(1)
+
+        except requests.RequestException as e:
+            print(f"Error fetching cities for {state}: {e}")
+
+    return city_urls
+
+# Base URL for the Petco store directory
+base_url = "https://stores.petco.com/us"
+
+# Step 1: Scrape all states
+states = scrape_states(base_url)
+
+# Step 2: Generate URLs for each city in the scraped states
+city_urls = generate_city_urls(states)
+
+# Print only the final generated city URLs
+for url in city_urls:
+    print(url)
