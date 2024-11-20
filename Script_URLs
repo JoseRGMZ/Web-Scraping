@@ -1,73 +1,103 @@
-import requests
-from bs4 import BeautifulSoup
-import time  # Import time for delay
+# Importamos las librerías necesarias
+import requests  # Para realizar solicitudes HTTP
+from bs4 import BeautifulSoup  # Para analizar y extraer datos del HTML
+import time  # Para introducir retrasos entre las solicitudes
 
+# Función para obtener la lista de estados desde el sitio web base
 def scrape_states(base_url):
-    states = []
+    """
+    Raspa los enlaces de los estados desde la URL base proporcionada.
+
+    Args:
+        base_url (str): URL base del sitio web de Petco donde se encuentran los estados.
+
+    Returns:
+        list: Lista de abreviaciones de estados extraídas de los enlaces.
+    """
+    states = []  # Lista para almacenar las abreviaciones de los estados
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    }
+    }  # Headers para emular un navegador y evitar bloqueos
 
     try:
+        # Realizamos la solicitud HTTP a la URL base
         response = requests.get(base_url, headers=headers)
-        response.raise_for_status()  # Raise an error for bad responses
+        response.raise_for_status()  # Lanza una excepción si ocurre un error HTTP
+
+        # Analizamos el contenido HTML de la respuesta
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Find all state links in the state directory
+        # Buscamos todos los enlaces de los estados en el directorio de estados
         state_links = soup.find_all('a', class_='Directory-listLink')
         for link in state_links:
-            state_abbr = link['href'].strip()  # Extract the state abbreviation from the link
-            states.append(state_abbr)
+            # Extraemos la abreviación del estado desde el atributo 'href' del enlace
+            state_abbr = link['href'].strip()
+            states.append(state_abbr)  # Añadimos la abreviación a la lista
 
     except requests.RequestException as e:
+        # Imprimimos un mensaje de error si ocurre un problema en la solicitud
         print(f"Error fetching {base_url}: {e}")
 
-    return states
+    return states  # Devolvemos la lista de estados
 
+# Función para generar URLs de ciudades a partir de los estados
 def generate_city_urls(states):
-    base_url = "https://stores.petco.com"
-    city_urls = []
+    """
+    Genera URLs para cada ciudad en los estados proporcionados.
+
+    Args:
+        states (list): Lista de abreviaciones de estados.
+
+    Returns:
+        list: Lista de URLs completas para cada ciudad.
+    """
+    base_url = "https://stores.petco.com"  # URL base del sitio web
+    city_urls = []  # Lista para almacenar las URLs completas de las ciudades
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    }
+    }  # Headers para emular un navegador
 
     for state in states:
         try:
-            # Construct the state URL to scrape its cities
+            # Construimos la URL del estado para obtener sus ciudades
             state_url = f"{base_url}/{state}/"
             response = requests.get(state_url, headers=headers)
-            response.raise_for_status()  # Raise an error for bad responses
+            response.raise_for_status()  # Lanza una excepción si ocurre un error HTTP
+
+            # Analizamos el contenido HTML de la página del estado
             soup = BeautifulSoup(response.text, 'html.parser')
 
-            # Find all city links
+            # Buscamos todos los enlaces de las ciudades
             city_links = soup.find_all('a', class_='Directory-listLink')
             for link in city_links:
+                # Procesamos el nombre de la ciudad desde el atributo 'href'
                 city_name = link['href'].strip().split('/')[-1].replace('.html', '')
-                parts = city_name.split('-')
+                parts = city_name.split('-')  # Dividimos el nombre en partes
 
-                if len(parts) >= 4:
-                    extracted_city_name = parts[2]  # Second part (the actual city name)
-                    # Append .html to the final URL
+                if len(parts) >= 4:  # Verificamos que tenga al menos 4 partes
+                    extracted_city_name = parts[2]  # Extraemos el nombre real de la ciudad
+                    # Construimos la URL completa y la añadimos a la lista
                     final_url = f"{base_url}/{state}/{extracted_city_name}/{city_name}.html"
                     city_urls.append(final_url)
 
-            # Adding delay between requests
+            # Introducimos un retraso entre solicitudes para evitar bloquear el servidor
             time.sleep(1)
 
         except requests.RequestException as e:
+            # Imprimimos un mensaje de error si ocurre un problema en la solicitud
             print(f"Error fetching cities for {state}: {e}")
 
-    return city_urls
+    return city_urls  # Devolvemos la lista de URLs de las ciudades
 
-# Base URL for the Petco store directory
+# URL base del directorio de tiendas Petco
 base_url = "https://stores.petco.com/us"
 
-# Step 1: Scrape all states
+# Paso 1: Raspar todos los estados desde la URL base
 states = scrape_states(base_url)
 
-# Step 2: Generate URLs for each city in the scraped states
+# Paso 2: Generar las URLs para cada ciudad en los estados obtenidos
 city_urls = generate_city_urls(states)
 
-# Print only the final generated city URLs
+# Imprimimos únicamente las URLs finales generadas de las ciudades
 for url in city_urls:
     print(url)
