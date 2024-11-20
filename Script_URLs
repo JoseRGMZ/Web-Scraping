@@ -6,7 +6,7 @@ import time  # Para introducir retrasos entre las solicitudes
 # Función para obtener la lista de estados desde el sitio web base
 def scrape_states(base_url):
     """
-    Raspa los enlaces de los estados desde la URL base proporcionada.
+    Scrapea los enlaces de los estados desde la URL base proporcionada.
 
     Args:
         base_url (str): URL base del sitio web de Petco donde se encuentran los estados.
